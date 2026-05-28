@@ -1,4 +1,4 @@
-import { useMenuStore } from 'diptych-browser/stores/menu'
+import { useMenuStore } from 'spangap-browser/stores/menu'
 import EspnowPanel from '../panels/EspnowPanel.vue'
 
 export function registerEspnow() {

@@ -23,7 +23,7 @@
  * See docs/component-plan.md §5 / §11.
  */
 #include "espnow.h"
-#include "diptych.h"
+#include "spangap.h"
 #include "net.h"
 #include "ports.h"
 
@@ -487,7 +487,7 @@ static void espnowTaskMain(void*) {
     }
 }
 
-#if CONFIG_DIPTYCH_LCD
+#if CONFIG_SPANGAP_LCD
 #include "lcd.h"
 /* Settings → Reticulum → Transports → ESPnow. Mirrors the web EspnowPanel. */
 static void espnowSettingsPane(void* arg) {
@@ -513,7 +513,7 @@ void espnowInit(void) {
         storageSet("s.espnow.version", ESPNOW_VERSION);
     }
 
-#if CONFIG_DIPTYCH_LCD
+#if CONFIG_SPANGAP_LCD
     lcdRegisterSettings("Reticulum/Transports/ESPnow", "ESPnow", espnowSettingsPane);
 #endif
 

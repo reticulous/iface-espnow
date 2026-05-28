@@ -1,0 +1,9 @@
+description: "reticulous-espnow: RNS-over-ESPnow transport for reticulous (broadcast peer, long-range PHY)."
+url: https://github.com/reticulous/reticulous-espnow
+version: "0.1.0"
+license: "Apache-2.0"
+targets:
+  - esp32s3
+dependencies:
+  idf:
+    version: ">=5.5"
