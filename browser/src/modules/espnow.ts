@@ -2,14 +2,14 @@ import { useMenuStore } from 'spangap-browser/stores/menu'
 import EspnowPanel from '../panels/EspnowPanel.vue'
 
 export function registerEspnow() {
-  useMenuStore().register('settings', 'Settings', 10, [
+  useMenuStore().register('settings', 'Settings', [
     {
-      id: 'reticulum', label: 'Reticulum', type: 'submenu', order: 30,
+      id: 'reticulum', label: 'Reticulum', type: 'submenu',
       children: [
         {
-          id: 'reticulum.transports', label: 'Transports', type: 'submenu', order: 20,
+          id: 'reticulum.transports', label: 'Transports', type: 'submenu',
           children: [
-            { id: 'reticulum.transports.espnow', label: 'ESPnow', type: 'panel', order: 20,
+            { id: 'reticulum.transports.espnow', label: 'ESPnow', type: 'panel',
               component: EspnowPanel },
           ],
         },
