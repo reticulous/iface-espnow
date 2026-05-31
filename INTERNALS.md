@@ -1,4 +1,4 @@
-# reticulous-espnow — internals
+# tr-espnow — internals
 
 ## Wire format
 

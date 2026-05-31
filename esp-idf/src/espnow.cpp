@@ -421,9 +421,10 @@ static void onNetPoll(const char*) {
 /* ─────────────── CLI ─────────────── */
 
 static void cliEspnow(const char* args) {
-    if (args && strcmp(args, "help") == 0) {
-        cliPrintf("  %-*s ESPnow transport status\n", CLI_HELP_COL, "espnow");
-        cliPrintf("  %-*s enable/disable ESPnow\n",    CLI_HELP_COL, "espnow up|down");
+    if (args && strcmp(args, "help") == 0) { cliPrintf("%-*s ESPnow transport status; up/down\n", CLI_HELP_COL, "espnow [up|down]"); return; }
+    if (args && cliWantsHelp(args)) {
+        cliPrintf("%-*s ESPnow transport status\n", CLI_HELP_COL, "espnow");
+        cliPrintf("%-*s enable/disable ESPnow\n",    CLI_HELP_COL, "espnow up|down");
         return;
     }
     if (args && strcmp(args, "up") == 0)   { storageSet("s.espnow.enable", 1); cliPrintf("enabled\n");  return; }

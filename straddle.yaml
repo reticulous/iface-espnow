@@ -1,18 +1,18 @@
-# reticulous-espnow — RNS-over-ESPnow transport for reticulous.
+# tr-espnow — RNS-over-ESPnow transport for reticulous.
 #
 # Bridges RNS packets over Espressif's connectionless ESP-NOW link using
 # the chip's long-range PHY. Single broadcast peer; one RNS packet = one
 # ESP-NOW v2 frame, no on-air framing. Brings the WiFi radio up itself —
 # no IP stack required (spangap-net is *not* a transitive dep).
 schema_version: 1
-name: reticulous/reticulous-espnow
+name: reticulous/tr-espnow
 prefix: rns_espnow
 version: 0.1.0
 firmware: esp-idf
 browser: browser
 platforms: [idf]
 requires:
-  - reticulous/reticulous-core
+  - reticulous/rns
   # Plan says espnow needs no IP stack, but today's code still pulls in
   # net.h for netIsUp() and NET_EV_UP/DOWN subscription. Add spangap-net
   # until the espnow task is reworked to own the radio independently.

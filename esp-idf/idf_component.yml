@@ -1,5 +1,5 @@
-description: "reticulous-espnow: RNS-over-ESPnow transport for reticulous (broadcast peer, long-range PHY)."
-url: https://github.com/reticulous/reticulous-espnow
+description: "tr-espnow: RNS-over-ESPnow transport for reticulous (broadcast peer, long-range PHY)."
+url: https://github.com/reticulous/tr-espnow
 version: "0.1.0"
 license: "Apache-2.0"
 targets:

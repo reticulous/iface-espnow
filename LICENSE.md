@@ -1,6 +1,6 @@
 # License
 
-This repository, **reticulous-espnow** (RNS-over-ESPnow transport for
+This repository, **tr-espnow** (RNS-over-ESPnow transport for
 reticulous; broadcast peer, long-range PHY), is released under the
 **Apache License, Version 2.0**.
 
