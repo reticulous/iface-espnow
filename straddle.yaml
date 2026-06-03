@@ -18,8 +18,7 @@ requires:
   # until the espnow task is reworked to own the radio independently.
   - spangap/spangap-net
 # Auto-init: folded into the generated spangapInitStraddles() dispatcher.
-# espnowInit() self-registers with rnsd via ITS, so it sorts after rnsd (order
-# 160) in the transport band.
+# espnowInit() self-registers with rnsd via ITS; `requires: reticulous/rns` puts
+# rnsd ahead of it in dependency-topo order, so its port surface is up first.
 init:
   - call: espnowInit
-    order: 170
