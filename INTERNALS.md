@@ -1,4 +1,4 @@
-# tr-espnow — internals
+# iface-espnow — internals
 
 ## Wire format
 

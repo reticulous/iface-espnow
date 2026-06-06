@@ -1,11 +1,11 @@
-# tr-espnow — RNS-over-ESPnow transport for reticulous.
+# iface-espnow — RNS-over-ESPnow transport for reticulous.
 #
 # Bridges RNS packets over Espressif's connectionless ESP-NOW link using
 # the chip's long-range PHY. Single broadcast peer; one RNS packet = one
 # ESP-NOW v2 frame, no on-air framing. Brings the WiFi radio up itself —
 # no IP stack required (spangap-net is *not* a transitive dep).
 schema_version: 1
-name: reticulous/tr-espnow
+name: reticulous/iface-espnow
 prefix: rns_espnow
 version: 0.1.0
 firmware: esp-idf
@@ -17,8 +17,14 @@ requires:
   # net.h for netIsUp() and NET_EV_UP/DOWN subscription. Add spangap-net
   # until the espnow task is reworked to own the radio independently.
   - spangap/spangap-net
+optional_requires:
+  # On-device ESPnow settings pane — esp-idf/conditional/spangap-lcd/src/
+  # espnow_lcd.cpp, compiled only when the lcd straddle is staged.
+  - spangap/spangap-lcd
 # Auto-init: folded into the generated spangapInitStraddles() dispatcher.
 # espnowInit() self-registers with rnsd via ITS; `requires: reticulous/rns` puts
 # rnsd ahead of it in dependency-topo order, so its port surface is up first.
 init:
   - call: espnowInit
+  - call: espnowLcdRegister
+    when: spangap/spangap-lcd

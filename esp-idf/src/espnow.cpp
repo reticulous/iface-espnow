@@ -488,23 +488,6 @@ static void espnowTaskMain(void*) {
     }
 }
 
-#if CONFIG_SPANGAP_LCD
-#include "lcd.h"
-/* Settings → Reticulum → Transports → ESPnow. Mirrors the web EspnowPanel. */
-static void espnowSettingsPane(void* arg) {
-    lv_obj_t* p = static_cast<lv_obj_t*>(arg);
-    lcdSettingSection (p, "ESPnow");
-    lcdSettingSwitch  (p, "Enable", "s.espnow.enable");
-    lcdSettingDropdown(p, "WiFi channel", "s.espnow.channel",
-                       "1,2,3,4,5,6,7,8,9,10,11,12,13");
-    lcdSettingDropdown(p, "Rate", "s.espnow.rate", "250k,500k");
-    lcdSettingDropdown(p, "On conflict", "s.espnow.conflict_policy", "disable,stay");
-    lcdSettingSection (p, "Status");
-    lcdSettingValue   (p, "State", "espnow.state");
-    lcdSettingValue   (p, "Channel", "espnow.channel_eff");
-}
-#endif
-
 void espnowInit(void) {
     if (storageGetInt("s.espnow.version", 0) < ESPNOW_VERSION) {
         storageDefault("s.espnow.enable", 0);
@@ -513,10 +496,6 @@ void espnowInit(void) {
         storageDefault("s.espnow.conflict_policy", "disable");
         storageSet("s.espnow.version", ESPNOW_VERSION);
     }
-
-#if CONFIG_SPANGAP_LCD
-    lcdRegisterSettings("Reticulum/Transports/ESPnow", "ESPnow", espnowSettingsPane);
-#endif
 
     cliRegisterCmd("espnow", cliEspnow);
 

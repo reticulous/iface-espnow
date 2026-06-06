@@ -1,5 +1,5 @@
 {
-  "name": "tr-espnow",
+  "name": "iface-espnow",
   "version": "0.1.0",
   "type": "module",
   "description": "Browser-side ESPnow transport settings panel for reticulous.",

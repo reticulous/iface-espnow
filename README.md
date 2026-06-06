@@ -1,8 +1,8 @@
-# tr-espnow
+# iface-espnow
 
 ## What is this?
 
-**tr-espnow** is the RNS-over-ESPnow transport for
+**iface-espnow** is the RNS-over-ESPnow transport for
 [rns](../rns): it bridges RNS packets over
 Espressif's connectionless ESP-NOW link using the chip's long-range
 PHY. Single broadcast peer; one RNS packet = one ESP-NOW v2 frame, no
@@ -12,7 +12,7 @@ required**.
 ## What this straddle owns
 
 ```
-tr-espnow/
+iface-espnow/
 ├── esp-idf/
 │   ├── include/espnow.h
 │   └── src/espnow.cpp
