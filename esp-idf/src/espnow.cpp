@@ -487,6 +487,11 @@ static void espnowTaskMain(void*) {
     /* ESP-NOW needs the radio started; ask net to bring WiFi up. */
     netUp();
 
+    /* Wait for a valid clock before registering the iface and announcing —
+     * netUp() above lets SNTP sync first (when there's upstream). Bounded;
+     * proceeds on timeout. */
+    waitForTime(0);
+
     for (;;) {
         if (s_configDirty) { s_configDirty = false; applyConfig(); }
         if (s_recheckChan) { s_recheckChan = false; checkStaChannel(); }
