@@ -76,6 +76,9 @@ static uint8_t       s_channel = 1;
 static bool          s_rate500 = false;   /* false = 250 kbps, true = 500 kbps */
 static bool          s_policyStay = false;/* false = disable-until-disconnect,
                                            * true  = keep channel, leave WiFi */
+static char          s_ifacNetname[32] = "";  /* IFAC network_name (s.) */
+static char          s_ifacNetkey[64]  = "";  /* IFAC passphrase (secrets.) */
+static uint8_t       s_ifacSize = 0;          /* IFAC access-code length */
 static uint8_t       s_selfMac[6] = {0};
 
 /* Set by net upstream-up / throttled poll callbacks; the task re-checks
@@ -137,6 +140,9 @@ static bool registerWithRnsd(void) {
     reg.in = reg.out = 1;
     reg.fwd = 1;     /* gateway forwards */
     reg.rpt = 0;
+    reg.ifac_size = s_ifacSize;
+    safeStrncpy(reg.ifac_netname, s_ifacNetname, sizeof(reg.ifac_netname));
+    safeStrncpy(reg.ifac_netkey,  s_ifacNetkey,  sizeof(reg.ifac_netkey));
     s_rnsdHandle = itsConnect("rnsd", RNSD_PORT_TRANSPORT, &reg, sizeof(reg),
                               pdMS_TO_TICKS(500), 1, onRnsdRecv, onRnsdDisconnect);
     if (s_rnsdHandle < 0) { warn("rnsd register failed"); return false; }
@@ -338,11 +344,20 @@ static void applyConfig(void) {
     storageGetStr("s.espnow.conflict_policy", pol, sizeof(pol), "disable");
     bool stay = strcmp(pol, "stay") == 0;
 
+    char ifn[sizeof(s_ifacNetname)] = ""; storageGetStr("s.espnow.ifac_netname", ifn, sizeof(ifn), "");
+    char ifk[sizeof(s_ifacNetkey)]  = ""; storageGetStr("secrets.espnow.ifac_netkey", ifk, sizeof(ifk), "");
+    uint8_t ifs = (uint8_t)storageGetInt("s.espnow.ifac_size", 0);
+
     bool changed = ((uint8_t)ch != s_channel) || (r500 != s_rate500)
-                   || (stay != s_policyStay);
+                   || (stay != s_policyStay)
+                   || strcmp(ifn, s_ifacNetname) != 0 || strcmp(ifk, s_ifacNetkey) != 0
+                   || ifs != s_ifacSize;
     s_channel = (uint8_t)ch;
     s_rate500 = r500;
     s_policyStay = stay;
+    safeStrncpy(s_ifacNetname, ifn, sizeof(s_ifacNetname));
+    safeStrncpy(s_ifacNetkey,  ifk, sizeof(s_ifacNetkey));
+    s_ifacSize = ifs;
 
     if (!s_enabled) {
         espnowStop();
@@ -467,6 +482,7 @@ static void espnowTaskMain(void*) {
     netRegister(NET_EV_UPSTREAM_DOWN, onUpstreamChange);
     netRegister(NET_EV_POLL,          onNetPoll);
     storageSubscribeChanges("s.espnow", onCfgChange);
+    storageSubscribeChanges("secrets.espnow", onCfgChange);  /* IFAC passphrase */
 
     /* ESP-NOW needs the radio started; ask net to bring WiFi up. */
     netUp();
