@@ -26,5 +26,5 @@ static void espnowSettingsPane(void* arg) {
  * (spangap/spangap-lcd). Plain C++ linkage to match the generated dispatcher's
  * forward decl. */
 void espnowLcdRegister(void) {
-    lcdRegisterSettings("Reticulum/Transports/ESPnow", "ESPnow", espnowSettingsPane);
+    lcdRegisterSettings("Mesh Network/RNS Interfaces/ESPnow", "ESPnow", espnowSettingsPane);
 }
