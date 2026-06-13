@@ -472,6 +472,16 @@ static void cliEspnow(const char* args) {
 static void espnowTaskMain(void*) {
     info("[%s] task up", TAG);
 
+    /* Boot barrier: stay quiet until rns.ready — clock valid, network up (if
+     * configured), and the minimum settle floor elapsed. A brownout/boot-loop
+     * node must never reach RF TX and spam the shared medium. Bounded fallback
+     * so a wedged rnsd can't pin us. No rnsd, no
+     * point — so bail (don't start) if rns.ready never comes. */
+    if (!waitForFlag("rns.ready", 120)) {
+        err("[%s] rns.ready never set — not starting", TAG);
+        killSelf();
+    }
+
     itsClientInit(2);
     s_rxQueue = xQueueCreate(ESPNOW_RX_QDEPTH, sizeof(espnow_rx_t));
 
