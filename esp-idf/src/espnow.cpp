@@ -26,6 +26,7 @@
 #include "spangap.h"
 #include "net.h"
 #include "ports.h"
+#include "mem.h"
 
 #include "esp_now.h"
 #include "esp_wifi.h"
@@ -296,7 +297,7 @@ static bool espnowStart(void) {
 
 static void drainOutbound(void) {
     if (!s_running || s_rnsdHandle < 0) return;
-    static uint8_t frame[ESPNOW_MAGIC_LEN + RNS_MTU + 16];
+    PSRAM_BSS static uint8_t frame[ESPNOW_MAGIC_LEN + RNS_MTU + 16];
     std::memcpy(frame, ESPNOW_MAGIC, ESPNOW_MAGIC_LEN);
     uint8_t* pkt = frame + ESPNOW_MAGIC_LEN;
     while (itsBytesAvailable(s_rnsdHandle) > 0) {
