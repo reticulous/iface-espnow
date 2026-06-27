@@ -22,11 +22,57 @@ requires:
 # rnsd ahead of it in dependency-topo order, so its port surface is up first.
 init:
   - call: espnowInit
-  - call: espnowLcdRegister
-    when: spangap/spangap-lcd
 
 # Browser-side UI registration (parallel to init: above) — auto-wired into
 # the buildable SPA via straddles.gen.ts; no web-interface edit needed.
 browser_register:
   - call: registerEspnow
     module: modules/espnow
+
+# Declarative settings: LCD pane + storage defaults generated from this block.
+# web: false — the rich EspnowPanel.vue (conflict banner, radio-group policy with
+# long labels, IFAC secret, status lines) keeps owning the web leaf.
+settings:
+  - menu:
+      - { id: mesh, label: "Mesh Network", placement: 3 }
+      - { id: interfaces, label: "RNS Interfaces", placement: 2 }
+      - { id: espnow, label: "ESPnow" }
+    web: false
+    rows:
+      - section: "ESPnow"
+      - switch: { label: "Enable", key: "s.espnow.enable", default: 0 }
+      - dropdown:
+          label: "WiFi channel"
+          key: "s.espnow.channel"
+          default: 1
+          options:
+            - { v: 1,  l: "1" }
+            - { v: 2,  l: "2" }
+            - { v: 3,  l: "3" }
+            - { v: 4,  l: "4" }
+            - { v: 5,  l: "5" }
+            - { v: 6,  l: "6" }
+            - { v: 7,  l: "7" }
+            - { v: 8,  l: "8" }
+            - { v: 9,  l: "9" }
+            - { v: 10, l: "10" }
+            - { v: 11, l: "11" }
+            - { v: 12, l: "12" }
+            - { v: 13, l: "13" }
+      - dropdown:
+          label: "Rate"
+          key: "s.espnow.rate"
+          default: "250k"
+          options:
+            - { v: "250k", l: "250k" }
+            - { v: "500k", l: "500k" }
+      - dropdown:
+          label: "On conflict"
+          key: "s.espnow.conflict_policy"
+          default: "disable"
+          options:
+            - { v: "disable", l: "Disable" }
+            - { v: "stay",    l: "Stay" }
+      - section: "Status"
+      - value: { label: "State", key: "espnow.state" }
+      - value: { label: "Channel", key: "espnow.channel_eff" }
