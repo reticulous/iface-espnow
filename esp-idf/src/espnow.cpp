@@ -1,9 +1,9 @@
 /**
- * espnow — ESPnow transport task.
+ * espnow — ESPnow interface task.
  *
  * RNS-over-ESP-NOW. Single broadcast peer (FF:FF:FF:FF:FF:FF): every
  * node on the configured 2.4 GHz channel hears every packet, the same
- * broadcast medium the LoRa transport presents. No on-air framing — an
+ * broadcast medium the LoRa interface presents. No on-air framing — an
  * RNS packet (≤500 B) maps 1:1 to one ESP-NOW v2 frame (cap 1470 B).
  *
  * PHY: the chip's Espressif long-range mode only — 250 kbps or 500 kbps
@@ -42,7 +42,6 @@
 
 static const char* TAG = "espnow";
 
-#define ESPNOW_VERSION   1
 #define RNS_MTU          500
 #define ESPNOW_RX_QDEPTH 16
 
@@ -133,7 +132,7 @@ static void deregisterFromRnsd(void) {
 
 static bool registerWithRnsd(void) {
     deregisterFromRnsd();
-    rnsd_transport_t reg = {};
+    rnsd_iface_t reg = {};
     safeStrncpy(reg.name, "espnow", sizeof(reg.name));
     reg.mtu     = RNS_MTU;
     reg.bitrate = s_rate500 ? 500000 : 250000;
@@ -144,7 +143,7 @@ static bool registerWithRnsd(void) {
     reg.ifac_size = s_ifacSize;
     safeStrncpy(reg.ifac_netname, s_ifacNetname, sizeof(reg.ifac_netname));
     safeStrncpy(reg.ifac_netkey,  s_ifacNetkey,  sizeof(reg.ifac_netkey));
-    s_rnsdHandle = itsConnect("rnsd", RNSD_PORT_TRANSPORT, &reg, sizeof(reg),
+    s_rnsdHandle = itsConnect("rnsd", RNSD_PORT_IFACE, &reg, sizeof(reg),
                               pdMS_TO_TICKS(500), 1, onRnsdRecv, onRnsdDisconnect);
     if (s_rnsdHandle < 0) { warn("rnsd register failed"); return false; }
     info("registered as iface espnow (mtu=%u bitrate=%u ch=%u)",
@@ -437,9 +436,9 @@ static void onNetPoll(const char*) {
 /* ─────────────── CLI ─────────────── */
 
 static void cliEspnow(const char* args) {
-    if (args && strcmp(args, "help") == 0) { cliPrintf("%-*s ESPnow transport status; up/down\n", CLI_HELP_COL, "espnow [up|down]"); return; }
+    if (args && strcmp(args, "help") == 0) { cliPrintf("%-*s ESPnow interface status; up/down\n", CLI_HELP_COL, "espnow [up|down]"); return; }
     if (args && cliWantsHelp(args)) {
-        cliPrintf("%-*s ESPnow transport status\n", CLI_HELP_COL, "espnow");
+        cliPrintf("%-*s ESPnow interface status\n", CLI_HELP_COL, "espnow");
         cliPrintf("%-*s enable/disable ESPnow\n",    CLI_HELP_COL, "espnow up|down");
         return;
     }
@@ -521,13 +520,6 @@ static void espnowTaskMain(void*) {
 }
 
 void espnowInit(void) {
-    if (storageGetInt("s.espnow.version", 0) < ESPNOW_VERSION) {
-        storageDefault("s.espnow.enable", 0);
-        storageDefault("s.espnow.channel", 1);
-        storageDefault("s.espnow.rate", "250k");
-        storageDefault("s.espnow.conflict_policy", "disable");
-        storageSet("s.espnow.version", ESPNOW_VERSION);
-    }
 
     cliRegisterCmd("espnow", cliEspnow);
 
