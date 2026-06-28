@@ -19,8 +19,6 @@
  * RX: esp_now recv cb runs on the WiFi task — it only copies the frame
  * into a FreeRTOS queue and notifies us; the espnow task forwards to
  * rnsd from its own context. TX: rnsd → onRnsdRecv → esp_now_send.
- *
- * See docs/component-plan.md §5 / §11.
  */
 #include "espnow.h"
 #include "spangap.h"

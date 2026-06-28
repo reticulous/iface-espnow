@@ -9,8 +9,6 @@
  *
  * Self-registers with rnsd as the `espnow` interface. Requires WiFi
  * hardware to be up (net owns the radio); active while netIsUp().
- *
- * See docs/component-plan.md §5 / §11.
  */
 #pragma once
 

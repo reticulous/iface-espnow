@@ -1,9 +1,10 @@
-# iface-espnow — RNS-over-ESPnow transport for reticulous.
+# iface-espnow — RNS-over-ESP-NOW interface for reticulous.
 #
 # Bridges RNS packets over Espressif's connectionless ESP-NOW link using
 # the chip's long-range PHY. Single broadcast peer; one RNS packet = one
-# ESP-NOW v2 frame, no on-air framing. Brings the WiFi radio up itself —
-# no IP stack required (spangap-net is *not* a transitive dep).
+# ESP-NOW v2 frame, with a 4-byte magic prefix tagging our traffic.
+# spangap-net owns the WiFi radio; ESP-NOW gates on it, so spangap-net is
+# a hard dependency.
 schema_version: 1
 name: reticulous/iface-espnow
 prefix: rns_espnow
@@ -13,9 +14,9 @@ browser: browser
 platforms: [idf]
 requires:
   - reticulous/rns
-  # Plan says espnow needs no IP stack, but today's code still pulls in
-  # net.h for netIsUp() and NET_EV_UP/DOWN subscription. Add spangap-net
-  # until the espnow task is reworked to own the radio independently.
+  # spangap-net owns the WiFi radio. ESP-NOW only needs the radio started,
+  # so the task pulls in net.h for netIsUp() and the NET_EV_UP/DOWN events
+  # and asks net to bring WiFi up.
   - spangap/spangap-net
 # Auto-init: folded into the generated spangapInitStraddles() dispatcher.
 # espnowInit() self-registers with rnsd via ITS; `requires: reticulous/rns` puts
