@@ -106,6 +106,9 @@ static void publishState(const char* state) {
 }
 
 static void publishStats(void) {
+    /* One bracket → one storage op instead of 8 sync round-trips per second,
+     * so a 1 Hz stats publish can't jam the storage op port during a burst. */
+    storageBegin();
     storageSet("espnow.stats.tx_bytes",  (int)(s_txBytes  & 0x7fffffff));
     storageSet("espnow.stats.rx_bytes",  (int)(s_rxBytes  & 0x7fffffff));
     storageSet("espnow.stats.tx_frames", (int)(s_txFrames & 0x7fffffff));
@@ -114,6 +117,7 @@ static void publishStats(void) {
     storageSet("espnow.stats.rx_drop",   (int)(s_rxDrop   & 0x7fffffff));
     storageSet("espnow.channel_eff",     (int)s_channel);
     storageSet("espnow.rate_eff",        s_rate500 ? 500000 : 250000);
+    storageEnd();
 }
 
 /* ─────────────── rnsd registration ─────────────── */
