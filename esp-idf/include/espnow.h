@@ -12,4 +12,12 @@
  */
 #pragma once
 
-void espnowInit(void);
+#include "service.h"
+
+/** Boot-registered ESPnow service: onInit() registers the `espnow` CLI verb
+ *  and spawns the interface task (self-registers with rnsd; active while
+ *  netIsUp()). */
+class EspnowService : public Service {
+public:
+    void onInit() override;
+};

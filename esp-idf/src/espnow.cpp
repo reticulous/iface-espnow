@@ -521,7 +521,7 @@ static void espnowTaskMain(void*) {
     }
 }
 
-void espnowInit(void) {
+void EspnowService::onInit() {
 
     cliRegisterCmd("espnow", cliEspnow);
 

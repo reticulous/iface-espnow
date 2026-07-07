@@ -18,13 +18,14 @@ requires:
   # so the task pulls in net.h for netIsUp() and the NET_EV_UP/DOWN events
   # and asks net to bring WiFi up.
   - spangap/spangap-net
-# Auto-init: folded into the generated spangapInitStraddles() dispatcher.
-# espnowInit() self-registers with rnsd via ITS; `requires: reticulous/rns` puts
-# rnsd ahead of it in dependency-topo order, so its port surface is up first.
-init:
-  - call: espnowInit
+# Boot-registered service: the generated dispatcher constructs EspnowService and
+# calls EspnowService::onInit(), which self-registers with rnsd via ITS.
+# `requires: reticulous/rns` puts rnsd ahead of it in dependency-topo order, so
+# its port surface is up first.
+services:
+  - { class: EspnowService, header: espnow.h }
 
-# Browser-side UI registration (parallel to init: above) — auto-wired into
+# Browser-side UI registration (parallel to services: above) — auto-wired into
 # the buildable SPA via straddles.gen.ts; no web-interface edit needed.
 browser_register:
   - call: registerEspnow
