@@ -101,8 +101,10 @@ typedef struct {
 /* ─────────────── publish ─────────────── */
 
 static void publishState(const char* state) {
+    storageBegin();
     storageSet("espnow.state", state);
     storageSet("espnow.up", s_running ? 1 : 0);
+    storageEnd();
 }
 
 static void publishStats(void) {
