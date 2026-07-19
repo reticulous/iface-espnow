@@ -77,6 +77,7 @@ static bool          s_policyStay = false;/* false = disable-until-disconnect,
 static char          s_ifacNetname[32] = "";  /* IFAC network_name (s.) */
 static char          s_ifacNetkey[64]  = "";  /* IFAC passphrase (secrets.) */
 static uint8_t       s_ifacSize = 0;          /* IFAC access-code length */
+static uint8_t       s_announceCap = RNS_IFACE_ANNOUNCE_CAP_DEFAULT;  /* % bw cap for announces */
 static uint8_t       s_selfMac[6] = {0};
 
 /* Set by net upstream-up / throttled poll callbacks; the task re-checks
@@ -145,6 +146,7 @@ static bool registerWithRnsd(void) {
     reg.fwd = 1;     /* gateway forwards */
     reg.rpt = 0;
     reg.ifac_size = s_ifacSize;
+    reg.announce_cap = s_announceCap;
     safeStrncpy(reg.ifac_netname, s_ifacNetname, sizeof(reg.ifac_netname));
     safeStrncpy(reg.ifac_netkey,  s_ifacNetkey,  sizeof(reg.ifac_netkey));
     s_rnsdHandle = itsConnect("rnsd", RNSD_PORT_IFACE, &reg, sizeof(reg),
@@ -351,17 +353,19 @@ static void applyConfig(void) {
     char ifn[sizeof(s_ifacNetname)] = ""; storageGetStr("s.espnow.ifac_netname", ifn, sizeof(ifn), "");
     char ifk[sizeof(s_ifacNetkey)]  = ""; storageGetStr("secrets.espnow.ifac_netkey", ifk, sizeof(ifk), "");
     uint8_t ifs = (uint8_t)storageGetInt("s.espnow.ifac_size", 0);
+    uint8_t acap = (uint8_t)storageGetInt("s.espnow.announce_cap", RNS_IFACE_ANNOUNCE_CAP_DEFAULT);
 
     bool changed = ((uint8_t)ch != s_channel) || (r500 != s_rate500)
                    || (stay != s_policyStay)
                    || strcmp(ifn, s_ifacNetname) != 0 || strcmp(ifk, s_ifacNetkey) != 0
-                   || ifs != s_ifacSize;
+                   || ifs != s_ifacSize || acap != s_announceCap;
     s_channel = (uint8_t)ch;
     s_rate500 = r500;
     s_policyStay = stay;
     safeStrncpy(s_ifacNetname, ifn, sizeof(s_ifacNetname));
     safeStrncpy(s_ifacNetkey,  ifk, sizeof(s_ifacNetkey));
     s_ifacSize = ifs;
+    s_announceCap = acap;
 
     if (!s_enabled) {
         espnowStop();
