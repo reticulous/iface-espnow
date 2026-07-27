@@ -35,7 +35,11 @@ it reaches `rnsd`.
 
 The Wi-Fi radio is owned by [spangap-net](../spangap-net) — a **hard
 dependency**. ESP-NOW only needs the radio started, so this interface asks net to
-bring Wi-Fi up (`netUp()`), gates on `netIsUp()`, and (de)inits its ESP-NOW
+bring Wi-Fi up (`netUp()`) — but **only while enabled**. The request is issued
+from the enable-driven `applyConfig` reconcile (run now-at-boot and on every
+`s.espnow` change), never as an unconditional boot-time call, so a disabled
+interface never powers the radio; and while disabled the task parks rather than
+spinning its 1 Hz stats loop. It gates on `netIsUp()`, and (de)inits its ESP-NOW
 endpoint on net's `NET_EV_UP`/`NET_EV_DOWN` events. It never owns the radio
 itself.
 

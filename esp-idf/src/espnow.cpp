@@ -373,6 +373,11 @@ static void applyConfig(void) {
         publishState("down");
         return;
     }
+    /* Enabled but no WiFi yet — ask net to bring it up. Gated here (not at boot)
+     * so only an enabled interface powers the radio; netUp itself no-ops when
+     * s.net.wifi.enable=0. onNetUp() re-runs applyConfig once the radio is up;
+     * espnowStart() no-ops to waiting_wifi until then. */
+    if (!s_netUp) netUp();
     if (s_running && changed) espnowStop();   /* re-apply ch / rate */
     if (!s_running) espnowStart();
 }
@@ -502,13 +507,15 @@ static void espnowTaskMain(void*) {
     storageSubscribeChanges("s.espnow", onCfgChange);
     storageSubscribeChanges("secrets.espnow", onCfgChange);  /* IFAC passphrase */
 
-    /* ESP-NOW needs the radio started; ask net to bring WiFi up. */
-    netUp();
+    /* Reconcile against s.espnow.enable up front: a disabled interface must not
+     * power the WiFi radio. applyConfig() asks net to bring WiFi up only when
+     * enabled — every bring-up request routes through the enable gate. */
+    applyConfig();
 
-    /* Wait for a valid clock before registering the iface and announcing —
-     * netUp() above lets SNTP sync first (when there's upstream). Bounded;
-     * proceeds on timeout. */
-    waitForTime(0);
+    /* Wait for a valid clock before registering the iface and announcing — only
+     * when actually coming up (netUp() in applyConfig lets SNTP sync first when
+     * there's upstream). Bounded; proceeds on timeout. */
+    if (s_enabled) waitForTime(0);
 
     for (;;) {
         if (s_configDirty) { s_configDirty = false; applyConfig(); }
@@ -522,7 +529,9 @@ static void espnowTaskMain(void*) {
         drainOutbound();
         publishStats();
 
-        itsPoll(pdMS_TO_TICKS(1000));   /* cap so stats publish; woken by
+        /* Cap so stats publish while enabled; when disabled there's nothing to
+         * publish, so park until an event (enable toggle / net evt) wakes us. */
+        itsPoll(s_enabled ? pdMS_TO_TICKS(1000) : portMAX_DELAY);   /* also woken by
                                          * rx-queue notify / cfg / net evt */
     }
 }
