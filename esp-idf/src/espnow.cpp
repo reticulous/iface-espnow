@@ -21,6 +21,7 @@
  * rnsd from its own context. TX: rnsd → onRnsdRecv → esp_now_send.
  */
 #include "espnow.h"
+#include "rnsd.h"
 #include "spangap.h"
 #include "net.h"
 #include "ports.h"
@@ -62,6 +63,8 @@ static const uint8_t ESPNOW_MAGIC[4] = { 'R','N','S', 0x01 };
 /* ─────────────── globals (single-task ownership) ─────────────── */
 
 static TaskHandle_t  s_task     = nullptr;
+static volatile bool s_stop     = false;   /* rns stop → break the work loop and park */
+static volatile bool s_parked   = false;   /* true while parked (stopped); espnowStop waits on it */
 static QueueHandle_t s_rxQueue  = nullptr;
 
 static int           s_rnsdHandle = -1;
@@ -195,7 +198,7 @@ static void espnowSendCb(const esp_now_send_info_t* /*tx*/,
 
 /* ─────────────── bring-up / tear-down ─────────────── */
 
-static void espnowStop(void) {
+static void radioStop(void) {
     if (!s_running) return;
     esp_now_unregister_recv_cb();
     esp_now_unregister_send_cb();
@@ -208,7 +211,7 @@ static void espnowStop(void) {
     info("stopped");
 }
 
-static bool espnowStart(void) {
+static bool radioStart(void) {
     if (s_running) return true;
     if (!s_netUp) { publishState("waiting_wifi"); return false; }
 
@@ -368,7 +371,7 @@ static void applyConfig(void) {
     s_announceCap = acap;
 
     if (!s_enabled) {
-        espnowStop();
+        radioStop();
         storageSet("espnow.conflict_ch", 0);
         publishState("down");
         return;
@@ -376,10 +379,10 @@ static void applyConfig(void) {
     /* Enabled but no WiFi yet — ask net to bring it up. Gated here (not at boot)
      * so only an enabled interface powers the radio; netUp itself no-ops when
      * s.net.wifi.enable=0. onNetUp() re-runs applyConfig once the radio is up;
-     * espnowStart() no-ops to waiting_wifi until then. */
+     * radioStart() no-ops to waiting_wifi until then. */
     if (!s_netUp) netUp();
-    if (s_running && changed) espnowStop();   /* re-apply ch / rate */
-    if (!s_running) espnowStart();
+    if (s_running && changed) radioStop();   /* re-apply ch / rate */
+    if (!s_running) radioStart();
 }
 
 static void onCfgChange(const char* /*key*/, const char* /*val*/) {
@@ -410,11 +413,11 @@ static void checkStaChannel(void) {
     if (s_running && mismatch) {
         warn("WiFi moved to channel %u — disabling ESPnow until WiFi "
              "disconnects (policy: disable)", (unsigned)p);
-        espnowStop();
+        radioStop();
         storageSet("espnow.conflict_ch", (int)p);
         publishState("channel_conflict");
     } else if (!s_running && !mismatch) {
-        espnowStart();          /* conflict cleared (WiFi gone / matched) */
+        radioStart();          /* conflict cleared (WiFi gone / matched) */
     }
 }
 
@@ -426,7 +429,7 @@ static void onNetUp(const char*) {
 
 static void onNetDown(const char*) {
     s_netUp = false;
-    espnowStop();
+    radioStop();
     publishState("waiting_wifi");
 }
 
@@ -485,39 +488,39 @@ static void cliEspnow(const char* args) {
 static void espnowTaskMain(void*) {
     info("[%s] task up", TAG);
 
-    /* Boot barrier: stay quiet until rns.ready — clock valid, network up (if
-     * configured), and the minimum settle floor elapsed. A brownout/boot-loop
-     * node must never reach RF TX and spam the shared medium. Bounded fallback
-     * so a wedged rnsd can't pin us. No rnsd, no
-     * point — so bail (don't start) if rns.ready never comes. */
-    if (!waitForFlag("rns.ready", 120)) {
-        err("[%s] rns.ready never set — not starting", TAG);
-        killSelf();
-    }
-
+    /* No boot barrier here: the RNS orchestrator only calls espnowStart() (which
+     * spawns this task) after rnsd is up and past its boot window, so the clock
+     * and network are already settled by the time we run. */
     itsClientInit(2);
     s_rxQueue = xQueueCreate(ESPNOW_RX_QDEPTH, sizeof(espnow_rx_t));
 
     s_netUp = netIsUp();
-    netRegister(NET_EV_UP,            onNetUp);
-    netRegister(NET_EV_DOWN,          onNetDown);
-    netRegister(NET_EV_UPSTREAM_UP,   onUpstreamChange);
-    netRegister(NET_EV_UPSTREAM_DOWN, onUpstreamChange);
-    netRegister(NET_EV_POLL,          onNetPoll);
+    /* net's event registry is append-only (no unregister), so register once for
+     * the process, not per start — re-registering on every rns start would pile
+     * up duplicate callbacks. The callbacks are null-safe against a stopped task
+     * (they guard s_task), so staying live across a stop is harmless; they keep
+     * s_netUp current for the next start. */
+    static bool s_netCbsRegistered = false;
+    if (!s_netCbsRegistered) {
+        s_netCbsRegistered = true;
+        netRegister(NET_EV_UP,            onNetUp);
+        netRegister(NET_EV_DOWN,          onNetDown);
+        netRegister(NET_EV_UPSTREAM_UP,   onUpstreamChange);
+        netRegister(NET_EV_UPSTREAM_DOWN, onUpstreamChange);
+        netRegister(NET_EV_POLL,          onNetPoll);
+    }
     storageSubscribeChanges("s.espnow", onCfgChange);
     storageSubscribeChanges("secrets.espnow", onCfgChange);  /* IFAC passphrase */
 
-    /* Reconcile against s.espnow.enable up front: a disabled interface must not
-     * power the WiFi radio. applyConfig() asks net to bring WiFi up only when
-     * enabled — every bring-up request routes through the enable gate. */
-    applyConfig();
-
-    /* Wait for a valid clock before registering the iface and announcing — only
-     * when actually coming up (netUp() in applyConfig lets SNTP sync first when
-     * there's upstream). Bounded; proceeds on timeout. */
-    if (s_enabled) waitForTime(0);
-
-    for (;;) {
+  for (;;) {   /* Park, don't delete: this task lives across rns stop/start, so its
+                * ITS slot + rx queue are reused, not leaked. */
+    /* Reconcile against s.espnow.enable on entry + each resume: a disabled
+     * interface must not power the WiFi radio. applyConfig() asks net to bring
+     * WiFi up only when enabled — every bring-up request routes through the
+     * enable gate. s_configDirty forces a fresh applyConfig() so radioStart()
+     * re-inits esp_now + re-registers with rnsd when enabled. */
+    s_configDirty = true;
+    while (!s_stop) {
         if (s_configDirty) { s_configDirty = false; applyConfig(); }
         if (s_recheckChan) { s_recheckChan = false; checkStaChannel(); }
 
@@ -533,13 +536,45 @@ static void espnowTaskMain(void*) {
          * publish, so park until an event (enable toggle / net evt) wakes us. */
         itsPoll(s_enabled ? pdMS_TO_TICKS(1000) : portMAX_DELAY);   /* also woken by
                                          * rx-queue notify / cfg / net evt */
+    }   /* end while(!s_stop) */
+
+        /* rns stop: tear down esp_now (unregister cbs, drop the broadcast peer,
+         * deinit) so a later resume re-inits cleanly; radioStop also deregisters
+         * us from rnsd (drops the RNSD_PORT_IFACE link → rnsd frees the interface
+         * slot). Keep the RX queue for the next start. Then PARK on the inbox
+         * until espnowStart() clears s_stop and notifies. */
+        radioStop();
+        s_parked = true;
+        info("[%s] stopped", TAG);
+        while (s_stop) itsPoll(portMAX_DELAY);
+        s_parked = false;
     }
+}
+
+/* ── RNS lifecycle hooks (registered with the orchestrator; see rnsServiceRegister) ── */
+static void espnowStart(void) {
+    s_stop = false;
+    if (!s_task)
+        s_task = spawnTask(espnowTaskMain, TAG, 6144, nullptr, 2, 0, STACK_PSRAM);
+    else
+        xTaskNotifyGive(s_task);   /* un-park the resident task */
+}
+
+static void espnowStop(void) {
+    if (!s_task || s_stop) return;
+    s_stop = true;
+    xTaskNotifyGive(s_task);   /* break the work loop; the task parks, not deleted */
+    for (int i = 0; i < 300 && !s_parked; i++) delay(10);   /* await park */
+    if (!s_parked) warn("[%s] stop timed out", TAG);
 }
 
 void EspnowService::onInit() {
 
     cliRegisterCmd("espnow", cliEspnow);
 
-    /* Core 0 alongside net + rnsd, prio 2, PSRAM stack. */
-    s_task = spawnTask(espnowTaskMain, TAG, 6144, nullptr, 2, 0, STACK_PSRAM);
+    /* Register with the RNS orchestrator instead of self-spawning: rnsStart()
+     * calls espnowStart() (which spawns espnowTaskMain) once rnsd is up and past
+     * its boot window, and rnsStop() calls espnowStop(). Core 0 alongside net +
+     * rnsd, prio 2, PSRAM stack. */
+    rnsServiceRegister(TAG, espnowStart, espnowStop, RNS_PHASE_IFACE);
 }
