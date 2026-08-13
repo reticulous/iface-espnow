@@ -26,7 +26,7 @@ interface port — there is no upstream fork. The straddle is a single source fi
 
 ## 2. Task and threading model
 
-One task: `spawnTask(espnowTaskMain, "espnow", 6144, …, prio 2, core 0,
+One task: `spawnTask(espnowTaskMain, "espnow", 6144, …, prio 1, core 0,
 STACK_PSRAM)` — core 0 alongside net and rnsd. All ESP-NOW endpoint state
 (`s_running`, the rnsd handle, channel/rate/IFAC config, counters) is
 single-task-owned and mutated only on this task.
