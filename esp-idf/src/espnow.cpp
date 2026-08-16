@@ -108,11 +108,40 @@ typedef struct {
 
 /* ─────────────── publish ─────────────── */
 
+/* The words a settings row shows for each state, and the state key itself.
+ * Publishing both means neither surface holds a state->wording table: the one
+ * that matters is here, beside the code that decides the state. */
+static const char* stateWords(const char* state) {
+    if (strcmp(state, "up") == 0)               return "up";
+    if (strcmp(state, "starting") == 0)         return "starting";
+    if (strcmp(state, "channel_conflict") == 0) return "channel conflict";
+    if (strcmp(state, "waiting_wifi") == 0)     return "waiting wifi";
+    if (strcmp(state, "error") == 0)            return "error";
+    return *state ? state : "down";
+}
+
 static void publishState(const char* state) {
     storageBegin();
     storageSet("espnow.state", state);
+    storageSet("espnow.state_text", stateWords(state));
     storageSet("espnow.up", s_running ? 1 : 0);
     storageEnd();
+}
+
+/* The conflict explanation, composed once. It names three channels and what to
+ * do about them — a sentence, not a value, and exactly the kind of thing the
+ * "firmware publishes finished strings" rule exists for. Empty when there is no
+ * conflict, which is also what gates the row that shows it. */
+static void publishConflict(int wifiCh) {
+    if (wifiCh <= 0) { storageSet("espnow.conflict_note", ""); return; }
+    char note[320];
+    snprintf(note, sizeof(note),
+             "ESPnow can't start: setting it to channel %d would drop this "
+             "device's WiFi, which is on channel %d. The channel is shared by "
+             "WiFi and ESPnow. To run both, move your 2.4 GHz router to channel "
+             "%d \xE2\x80\x94 or set ESPnow to channel %d.",
+             (int)s_channel, wifiCh, (int)s_channel, wifiCh);
+    storageSet("espnow.conflict_note", note);
 }
 
 static void publishStats(void) {
@@ -127,6 +156,26 @@ static void publishStats(void) {
     storageSet("espnow.stats.rx_drop",   (int)(s_rxDrop   & 0x7fffffff));
     storageSet("espnow.channel_eff",     (int)s_channel);
     storageSet("espnow.rate_eff",        s_rate500 ? 500000 : 250000);
+    /* The composed counters and the rate, as the settings rows show them. Four
+     * numbers in one line is a sentence about the link, and assembling it here
+     * keeps two UIs from each writing the same concatenation. */
+    char buf[96];
+    snprintf(buf, sizeof(buf), "rx %u (drop %u) \xC2\xB7 tx %u (fail %u)",
+             (unsigned)(s_rxFrames & 0x7fffffff), (unsigned)(s_rxDrop  & 0x7fffffff),
+             (unsigned)(s_txFrames & 0x7fffffff), (unsigned)(s_txFail  & 0x7fffffff));
+    storageSet("espnow.traffic", buf);
+    storageSet("espnow.rate_text", s_rate500 ? "500 kbps (long range)"
+                                             : "250 kbps (long range)");
+    /* Which WiFi network is pinning the channel, when one is. */
+    if (netIsStaConnected()) {
+        uint8_t primary = 0; wifi_second_chan_t sec;
+        esp_wifi_get_channel(&primary, &sec);
+        snprintf(buf, sizeof(buf), "%s \xC2\xB7 ch %u",
+                 storageGetStr("wifi.sta.ssid", "").c_str(), (unsigned)primary);
+        storageSet("espnow.wifi_text", buf);
+    } else {
+        storageSet("espnow.wifi_text", "");
+    }
     storageEnd();
 }
 
@@ -214,6 +263,7 @@ static void radioStop(void) {
     s_running = false;
     deregisterFromRnsd();
     storageSet("espnow.conflict_ch", 0);
+    publishConflict(0);
     publishState("down");
     info("stopped");
 }
@@ -248,6 +298,7 @@ static bool radioStart(void) {
              "not starting (policy: disable)",
              (unsigned)s_channel, (unsigned)primary);
         storageSet("espnow.conflict_ch", (int)primary);
+        publishConflict((int)primary);
         publishState("channel_conflict");
         return false;
     }
@@ -274,6 +325,7 @@ static bool radioStart(void) {
     if (esp_wifi_get_channel(&primary, &sec) == ESP_OK && primary)
         s_channel = primary;
     storageSet("espnow.conflict_ch", 0);
+    publishConflict(0);
 
     e = esp_now_init();
     if (e != ESP_OK) { err("esp_now_init: %s", esp_err_to_name(e));
@@ -389,6 +441,7 @@ static void applyConfig(void) {
     if (!s_enabled) {
         radioStop();
         storageSet("espnow.conflict_ch", 0);
+        publishConflict(0);
         publishState("down");
         return;
     }
@@ -431,6 +484,7 @@ static void checkStaChannel(void) {
              "disconnects (policy: disable)", (unsigned)p);
         radioStop();
         storageSet("espnow.conflict_ch", (int)p);
+        publishConflict((int)p);
         publishState("channel_conflict");
     } else if (!s_running && !mismatch) {
         radioStart();          /* conflict cleared (WiFi gone / matched) */
