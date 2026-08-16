@@ -30,7 +30,7 @@ services:
 # publishes finished.
 settings:
   - at:
-      - { id: mesh, label: "Mesh Network", short: "Mesh", order: 3 }
+      - { id: reticulum }
       - { id: interfaces, label: "RNS Interfaces", short: "Ifaces", order: 2 }
       - { id: espnow, label: "ESPnow", short: "ESPnow" }
     rows:
@@ -79,11 +79,13 @@ settings:
       - text: { label: "IFAC network", key: "s.espnow.ifac_netname" }
       - text: { label: "IFAC passphrase", key: "secrets.espnow.ifac_netkey", secret: true }
       - section: "Status"
-      - value: { label: "State", key: "espnow.state_text" }
-      - value: { label: "Channel", key: "espnow.channel_eff" }
-        when_key: espnow.up
-      - value: { label: "Rate", key: "espnow.rate_text" }
-        when_key: espnow.up
-      - value: { label: "WiFi", key: "espnow.wifi_text" }
-        when_key: espnow.wifi_text
-      - value: { label: "Frames", key: "espnow.traffic" }
+      - info:
+          rows:
+            - value: { label: "State", key: "espnow.state_text" }
+            - value: { label: "Channel", key: "espnow.channel_eff" }
+              when_key: espnow.up
+            - value: { label: "Rate", key: "espnow.rate_text" }
+              when_key: espnow.up
+            - value: { label: "WiFi", key: "espnow.wifi_text" }
+              when_key: espnow.wifi_text
+            - value: { label: "Frames", key: "espnow.traffic" }
