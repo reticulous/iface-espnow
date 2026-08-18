@@ -31,8 +31,7 @@ services:
 settings:
   - at:
       - { id: reticulum }
-      - { id: interfaces, label: "RNS Interfaces", short: "Ifaces", order: 2 }
-      - { id: espnow, label: "ESPnow", short: "ESPnow" }
+      - { id: espnow, label: "ESPnow", short: "ESPnow", order: 5 }
     rows:
       - section: "ESPnow"
       - caption: "RNS over ESP-NOW on the chip's long-range PHY. Every node on the same 2.4 GHz channel hears every packet. Requires WiFi to be up; while associated to an access point the channel is fixed by that AP."

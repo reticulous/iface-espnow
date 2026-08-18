@@ -128,7 +128,7 @@ Run on-device via `spangap cli "<command>"`.
 ## Browser
 
 A Settings panel (`browser/src/panels/EspnowPanel.vue`, registered by
-`modules/espnow.ts` under Settings → Reticulum Mesh → RNS Interfaces → ESPnow)
+`modules/espnow.ts` under Settings → Reticulum Mesh → ESPnow)
 exposes the enable switch, channel and rate, the conflict policy as a radio group,
 the IFAC network name and (write-only) passphrase, and a live status/counters
 block with the conflict banner.
