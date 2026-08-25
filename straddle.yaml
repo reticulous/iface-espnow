@@ -31,15 +31,16 @@ services:
 settings:
   - at:
       - { id: reticulum }
-      - { id: espnow, label: "ESPnow", short: "ESPnow", order: 5 }
+      - { id: interfaces }
+    order: 5
     rows:
-      - section: "ESPnow"
+      - heading: "ESPnow"
       - caption: "RNS over ESP-NOW on the chip's long-range PHY. Every node on the same 2.4 GHz channel hears every packet. Requires WiFi to be up; while associated to an access point the channel is fixed by that AP."
       # espnow.cpp composes the whole explanation, and publishes it empty when
       # there is no conflict — which is also what gates the row showing it.
       - value: { label: "Conflict", key: "espnow.conflict_note" }
         when_key: espnow.conflict_note
-      - switch: { label: "Enabled", key: "s.espnow.enable", default: 0 }
+      - switch: { label: "Enable ESPnow", key: "s.espnow.enable", default: 0 }
       - dropdown:
           label: "WiFi channel"
           key: "s.espnow.channel"
@@ -73,10 +74,24 @@ settings:
             - { v: "disable", l: "Disable until WiFi disconnects" }
             - { v: "stay",    l: "Stay on the ESPnow channel" }
       - caption: "Stay keeps this channel and refuses to join WiFi networks on another one, leaving if they change."
-      - section: "Access code"
-      - caption: "IFAC: a network name + passphrase every peer on this interface must match, or traffic is dropped. Leave both blank for an open interface."
-      - text: { label: "IFAC network", key: "s.espnow.ifac_netname" }
-      - text: { label: "IFAC passphrase", key: "secrets.espnow.ifac_netkey", secret: true }
+      - advanced:
+          rows:
+            - dropdown:
+                label: "Interface mode"
+                key: "s.espnow.mode"
+                default: "access_point"
+                options:
+                  - { v: "access_point", l: "Access point" }
+                  - { v: "gateway",      l: "Gateway" }
+                  - { v: "full",         l: "Full" }
+                  - { v: "roaming",      l: "Roaming" }
+                  - { v: "boundary",     l: "Boundary" }
+            - integer: { label: "Community Radius", key: "s.espnow.community_radius", min: 0, max: 7, default: 3 }
+            - caption: "Nodes within this many hops on this radio are yours: their announces are kept and answered for, and searches run on their behalf. Everyone else is still heard and reachable on demand."
+            - section: "Interface access code (IFAC)"
+            - caption: "A network name + passphrase every peer on this interface must match, or traffic is dropped. Leave both blank for an open interface."
+            - text: { label: "IFAC network", key: "s.espnow.ifac_netname" }
+            - text: { label: "IFAC passphrase", key: "s.espnow.ifac_netkey", secret: true }
       - section: "Status"
       - info:
           rows:

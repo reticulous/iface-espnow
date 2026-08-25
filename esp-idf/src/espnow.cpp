@@ -81,10 +81,8 @@ static char          s_ifacNetname[32] = "";  /* IFAC network_name (s.) */
 static char          s_ifacNetkey[64]  = "";  /* IFAC passphrase (secrets.) */
 static uint8_t       s_ifacSize = 0;          /* IFAC access-code length */
 static uint8_t       s_announceCap = RNS_IFACE_ANNOUNCE_CAP_DEFAULT;  /* % bw cap for announces */
-static uint8_t       s_retainAnnounces = 1;   /* keep announces heard on this radio edge */
-/* Transit policy — 0 = auto, i.e. inferred from mode exactly as before. */
-static uint8_t       s_policyManual = 0;
-static uint8_t       s_routeFor = 0;
+static uint8_t       s_communityRadius = 3;   /* serve nodes within this many hops on this radio */
+static uint8_t       s_mode = RNS_IFACE_MODE_ACCESS_POINT;
 static uint8_t       s_selfMac[6] = {0};
 
 /* Set by net upstream-up / throttled poll callbacks; the task re-checks
@@ -197,15 +195,13 @@ static bool registerWithRnsd(void) {
     safeStrncpy(reg.name, "espnow", sizeof(reg.name));
     reg.mtu     = RNS_MTU;
     reg.bitrate = s_rate500 ? 500000 : 250000;
-    reg.mode    = RNS_IFACE_MODE_GATEWAY;
+    reg.mode    = s_mode;
     reg.in = reg.out = 1;
-    reg.fwd = 1;     /* gateway forwards */
+    reg.fwd = (s_mode == RNS_IFACE_MODE_GATEWAY || s_mode == RNS_IFACE_MODE_FULL) ? 1 : 0;
     reg.rpt = 0;
     reg.ifac_size = s_ifacSize;
     reg.announce_cap = s_announceCap;
-    reg.retain_announces = s_retainAnnounces;
-    reg.policy_manual = s_policyManual;
-    reg.route_for     = s_routeFor;
+    reg.community_radius = s_communityRadius;
     safeStrncpy(reg.ifac_netname, s_ifacNetname, sizeof(reg.ifac_netname));
     safeStrncpy(reg.ifac_netkey,  s_ifacNetkey,  sizeof(reg.ifac_netkey));
     s_rnsdHandle = itsConnect("rnsd", RNSD_PORT_IFACE, &reg, sizeof(reg),
@@ -413,20 +409,26 @@ static void applyConfig(void) {
     bool stay = strcmp(pol, "stay") == 0;
 
     char ifn[sizeof(s_ifacNetname)] = ""; storageGetStr("s.espnow.ifac_netname", ifn, sizeof(ifn), "");
-    char ifk[sizeof(s_ifacNetkey)]  = ""; storageGetStr("secrets.espnow.ifac_netkey", ifk, sizeof(ifk), "");
+    char ifk[sizeof(s_ifacNetkey)]  = ""; storageGetStr("s.espnow.ifac_netkey", ifk, sizeof(ifk), "");
     uint8_t ifs = (uint8_t)storageGetInt("s.espnow.ifac_size", 0);
     uint8_t acap = (uint8_t)storageGetInt("s.espnow.announce_cap", RNS_IFACE_ANNOUNCE_CAP_DEFAULT);
-    /* On by default: this is a radio edge whose neighbours nobody else can
+    /* Default 3: this is a radio edge whose neighbours nobody else can
      * answer for, and re-acquiring one costs airtime on the expensive side. */
-    uint8_t ret = (uint8_t)storageGetInt("s.espnow.retain_announces", 1);
-    uint8_t polman = (uint8_t)storageGetInt("s.espnow.policy_manual", 0);
-    uint8_t rtfor  = (uint8_t)storageGetInt("s.espnow.route_for", 0);
+    uint8_t radius = (uint8_t)storageGetInt("s.espnow.community_radius", 3);
+    char modeStr[24] = "access_point";
+    storageGetStr("s.espnow.mode", modeStr, sizeof(modeStr), "access_point");
+    uint8_t m;
+    if      (strcmp(modeStr, "full")         == 0) m = RNS_IFACE_MODE_FULL;
+    else if (strcmp(modeStr, "gateway")      == 0) m = RNS_IFACE_MODE_GATEWAY;
+    else if (strcmp(modeStr, "roaming")      == 0) m = RNS_IFACE_MODE_ROAMING;
+    else if (strcmp(modeStr, "boundary")     == 0) m = RNS_IFACE_MODE_BOUNDARY;
+    else                                           m = RNS_IFACE_MODE_ACCESS_POINT;
 
     bool changed = ((uint8_t)ch != s_channel) || (r500 != s_rate500)
                    || (stay != s_policyStay)
                    || strcmp(ifn, s_ifacNetname) != 0 || strcmp(ifk, s_ifacNetkey) != 0
                    || ifs != s_ifacSize || acap != s_announceCap
-                   || ret != s_retainAnnounces;
+                   || radius != s_communityRadius || m != s_mode;
     s_channel = (uint8_t)ch;
     s_rate500 = r500;
     s_policyStay = stay;
@@ -434,9 +436,8 @@ static void applyConfig(void) {
     safeStrncpy(s_ifacNetkey,  ifk, sizeof(s_ifacNetkey));
     s_ifacSize = ifs;
     s_announceCap = acap;
-    s_retainAnnounces = ret;
-    s_policyManual = polman;
-    s_routeFor = rtfor;
+    s_communityRadius = radius;
+    s_mode = m;
 
     if (!s_enabled) {
         radioStop();
@@ -580,7 +581,6 @@ static void espnowTaskMain(void*) {
         netRegister(NET_EV_POLL,          onNetPoll);
     }
     storageSubscribeChanges("s.espnow", onCfgChange);
-    storageSubscribeChanges("secrets.espnow", onCfgChange);  /* IFAC passphrase */
 
   for (;;) {   /* Park, don't delete: this task lives across rns stop/start, so its
                 * ITS slot + rx queue are reused, not leaked. */

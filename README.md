@@ -84,9 +84,8 @@ The live Wi-Fi channel is re-checked on net upstream up/down and on a throttled
 | `s.espnow.conflict_policy` | `"disable"` | Behaviour on a Wi-Fi channel conflict: `"disable"` or `"stay"` (above). |
 | `s.espnow.ifac_netname` | `""` | IFAC network name. Empty = open (non-IFAC) interface. |
 | `s.espnow.ifac_size` | `0` | IFAC access-code length in bytes (0 = rnsd default). |
-| `s.espnow.retain_announces` | `1` | Keep the announces heard on this radio, not just forward them. On by default: this is an edge whose neighbours nobody else can answer for, and re-acquiring one costs airtime on the expensive side. |
-| `s.espnow.policy_manual` | `0` | Set this interface's transit policy by hand instead of inferring it from the interface mode. Off = auto, which is stock behaviour and leaves `route_for` unread. |
-| `s.espnow.route_for` | `0` | Read only when `policy_manual = 1`. `1` = we provide transport for the nodes on this radio: we relay announces towards them, we search on their behalf, and their paths get `s.rnsd.path.ttl_custody`. `0` = we still talk to them as an endpoint, we just don't work for them. Answering a path request for a destination we already know is never gated by this. See `rns/README.md`. |
+| `s.espnow.mode` | `"access_point"` | interface mode: `full`, `gateway`, `access_point`, `roaming`, `boundary` |
+| `s.espnow.community_radius` | `3` | Community Radius: nodes within this many hops on this radio are served — their announces kept and answered for, searches run on their behalf, and only their announces are re-broadcast onto the air. `0` = endpoint: on-demand only. Default 3: this is an edge whose neighbours nobody else can answer for. See `rns/README.md`. |
 
 `s.espnow.enable`, `s.espnow.channel`, `s.espnow.rate`, and
 `s.espnow.conflict_policy` are declared in this straddle's `straddle.yaml`
@@ -96,7 +95,7 @@ The live Wi-Fi channel is re-checked on net upstream up/down and on a throttled
 
 | Key | Meaning |
 |---|---|
-| `secrets.espnow.ifac_netkey` | IFAC passphrase. Empty = open interface. Write-only from the browser. |
+| `s.espnow.ifac_netkey` | IFAC passphrase. Empty = open interface. Write-only from the browser. |
 
 IFAC (Interface Access Codes) is RNS access control: a network name + passphrase
 that must match on every peer of the interface, or traffic is dropped. All three
