@@ -74,6 +74,13 @@ settings:
             - { v: "disable", l: "Disable until WiFi disconnects" }
             - { v: "stay",    l: "Stay on the ESPnow channel" }
       - caption: "Stay keeps this channel and refuses to join WiFi networks on another one, leaving if they change."
+      # How often this node says who it is is a property of the MEDIUM, so it
+      # lives on each interface and not on any application: lxmf, rnsh and rlpg
+      # keep their announce current with rnsd and never schedule anything.
+      - section: "Announces"
+      - integer: { label: "Announce interval", unit: "min", key: "s.espnow.announce_interval", min: 0, max: 1440, default: 30 }
+      - caption: "How often this node tells the air who it is. 0 = only when something changes or you press the button."
+      - button: { label: "Announce now", do: { set: { key: "espnow.announce_now", value: 1, edge: true } } }
       - advanced:
           rows:
             - dropdown:

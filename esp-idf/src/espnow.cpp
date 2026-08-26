@@ -98,6 +98,11 @@ static uint64_t      s_txFail = 0, s_rxDrop = 0;
 
 static volatile bool s_configDirty = true;
 
+/* This interface's RNS announce beat (rnsdAnnounceBeat state). Zero re-arms it,
+ * which is what a bring-up wants: the registration replay has just said who we
+ * are, so the first gap is a full interval. */
+static uint32_t      s_annNextMs = 0;
+
 /* Fixed-size RX slot — copied out of the WiFi-task recv cb. */
 typedef struct {
     uint16_t len;
@@ -460,6 +465,15 @@ static void onCfgChange(const char* /*key*/, const char* /*val*/) {
     if (s_task) xTaskNotifyGive(s_task);
 }
 
+/* "Announce now" button. Hosted on the storage task rather than this one — the
+ * whole handler is a fire-and-forget aux to rnsd, so there is nothing here that
+ * wants the espnow task, and this way the button works from onInit onwards. */
+static void onAnnounceNow(const char* key, const char* val) {
+    if (!val || atoi(val) == 0) return;   /* the edge write's leading 0 is not a press */
+    storageUnset(key);
+    rnsdIfaceAnnounceNow("espnow");
+}
+
 /* Reconcile the live WiFi channel with ours. Runs on the espnow task
  * (flagged by net upstream-up / throttled poll). The only way to catch
  * an AP that *moved* channel mid-session — esp_wifi follows the switch
@@ -602,6 +616,11 @@ static void espnowTaskMain(void*) {
         drainOutbound();
         publishStats();
 
+        /* Say who we are on the air, on this interface's own schedule. Read
+         * live so an edit takes effect without a re-register. */
+        rnsdAnnounceBeat(&s_annNextMs,
+                         storageGetInt("s.espnow.announce_interval", 30), "espnow");
+
         /* Cap so stats publish while enabled; when disabled there's nothing to
          * publish, so park until an event (enable toggle / net evt) wakes us. */
         itsPoll(s_enabled ? pdMS_TO_TICKS(1000) : portMAX_DELAY);   /* also woken by
@@ -641,6 +660,8 @@ static void espnowStop(void) {
 void EspnowService::onInit() {
 
     cliRegisterCmd("espnow", cliEspnow);
+
+    storageSubscribeChanges("espnow.announce_now", onAnnounceNow, /*onStorageTask=*/true);
 
     /* Register with the RNS orchestrator instead of self-spawning: rnsStart()
      * calls espnowStart() (which spawns espnowTaskMain) once rnsd is up and past
