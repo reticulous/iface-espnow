@@ -115,6 +115,7 @@ and enforces it.
 | `espnow.conflict_ch` | The conflicting Wi-Fi channel during a conflict; `0` when there is none. |
 | `espnow.stats.{tx_bytes,rx_bytes,tx_frames,rx_frames,tx_fail,rx_drop}` | Traffic counters. |
 | `espnow.announce_now` | Command sentinel, self-clearing: ask rnsd to replay every hosted destination's announce onto `espnow` now — the pane's **Announce now** button. |
+| `rns.pill.espnow.*` | The top status line's ESPnow pill (light green `9be89b`, order 5), written through rnsd: `E` and how many nodes are on the channel. This medium is pure broadcast and keeps no peer table of its own, so the count comes from rnsd's shared neighbourhood — the same list `espnow n` prints. Shown while the switch is on, at 0 as readily as at 3. See [rns/README](../rns/README.md#status-line-pills). |
 
 ## CLI
 
@@ -122,7 +123,14 @@ and enforces it.
 espnow            interface status: state, channel, rate, conflict policy, counters
 espnow up         enable (sets s.espnow.enable = 1)
 espnow down       disable (sets s.espnow.enable = 0)
+espnow n[eighbors] [-v]  direct RNS peers on the channel
 ```
+
+ESP-NOW is pure broadcast and keeps no peer table of its own, so `espnow n` reads
+rnsd's shared neighbourhood — which destinations were heard one hop away here —
+in the format every interface prints. It is also where the status-line pill's
+count comes from. See
+[rns/README](../rns/README.md#the-neighbourhood--who-is-one-hop-away).
 
 Run on-device via `spangap cli "<command>"`.
 

@@ -123,12 +123,22 @@ static const char* stateWords(const char* state) {
     return *state ? state : "down";
 }
 
+/* The status-bar pill: `E` and how many nodes are on the channel. ESP-NOW is a
+ * pure broadcast medium and keeps no peer table of its own, so the count comes
+ * from rnsd's shared neighbourhood — the same list `espnow n` prints. Published
+ * while the switch is on, at 0 as readily as at 3. */
+static void publishPill(void) {
+    if (s_enabled) rnsdPillSet("espnow", 'E', rnsdPeersCount("espnow"), "9be89b", 5);
+    else           rnsdPillClear("espnow");
+}
+
 static void publishState(const char* state) {
     storageBegin();
     storageSet("espnow.state", state);
     storageSet("espnow.state_text", stateWords(state));
     storageSet("espnow.up", s_running ? 1 : 0);
     storageEnd();
+    publishPill();
 }
 
 /* The conflict explanation, composed once. It names three channels and what to
@@ -512,10 +522,17 @@ static void onNetUp(const char*) {
     if (s_task) xTaskNotifyGive(s_task);
 }
 
+/* Net events are dispatched synchronously on the *net* task, while esp_now and
+ * the rnsd ITS handle belong to the espnow task. itsDisconnect() acts only for
+ * a task that owns an end of the connection and silently returns for anyone
+ * else, so calling radioStop() here would leave rnsd's half of the
+ * RNSD_PORT_IFACE link registered with nobody draining it: every rnsd send then
+ * burns its 100 ms timeout and drops. Record the edge; the task's own loop
+ * stops the radio. */
 static void onNetDown(const char*) {
     s_netUp = false;
-    radioStop();
     publishState("waiting_wifi");
+    if (s_task) xTaskNotifyGive(s_task);
 }
 
 static void onUpstreamChange(const char*) {     /* UP or DOWN */
@@ -541,8 +558,10 @@ static void cliEspnow(const char* args) {
     if (args && cliWantsHelp(args)) {
         cliPrintf("%-*s ESPnow interface status\n", CLI_HELP_COL, "espnow");
         cliPrintf("%-*s enable/disable ESPnow\n",    CLI_HELP_COL, "espnow up|down");
+        cliPrintf("%-*s direct RNS peers (-v for detail)\n", CLI_HELP_COL, "espnow n[eighbors]");
         return;
     }
+    if (rnsdPeersCli(args, "espnow", "ESPnow")) return;
     if (args && strcmp(args, "up") == 0)   { storageSet("s.espnow.enable", 1); cliPrintf("enabled\n");  return; }
     if (args && strcmp(args, "down") == 0) { storageSet("s.espnow.enable", 0); cliPrintf("disabled\n"); return; }
 
@@ -606,6 +625,9 @@ static void espnowTaskMain(void*) {
     s_configDirty = true;
     while (!s_stop) {
         if (s_configDirty) { s_configDirty = false; applyConfig(); }
+        /* WiFi went away (flagged by onNetDown, which cannot do this itself).
+         * radioStop() ends on "down"; the radio is only waiting for WiFi. */
+        if (s_running && !s_netUp) { radioStop(); publishState("waiting_wifi"); }
         if (s_recheckChan) { s_recheckChan = false; checkStaChannel(); }
 
         drainInbound();
@@ -615,6 +637,7 @@ static void espnowTaskMain(void*) {
 
         drainOutbound();
         publishStats();
+        publishPill();      /* the count moves on announces, which move no counter */
 
         /* Say who we are on the air, on this interface's own schedule. Read
          * live so an edit takes effect without a re-register. */

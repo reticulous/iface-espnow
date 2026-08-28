@@ -41,7 +41,13 @@ settings:
       - value: { label: "Conflict", key: "espnow.conflict_note" }
         when_key: espnow.conflict_note
       - switch: { label: "Enable ESPnow", key: "s.espnow.enable", default: 0 }
-      - dropdown:
+      # Everything below is gated on that switch. A disabled radio has no
+      # channel worth picking, no announce beat to schedule and no traffic to
+      # count, and a pane that offers all of it anyway reads as a radio that is
+      # doing something. (The conflict row above the switch stays: it explains
+      # why the radio may be off in the first place.)
+      - when_key: "s.espnow.enable"
+        dropdown:
           label: "WiFi channel"
           key: "s.espnow.channel"
           default: 1
@@ -59,14 +65,16 @@ settings:
             - { v: 11, l: "11" }
             - { v: 12, l: "12 (not US)" }
             - { v: 13, l: "13 (not US)" }
-      - dropdown:
+      - when_key: "s.espnow.enable"
+        dropdown:
           label: "Long-range rate"
           key: "s.espnow.rate"
           default: "250k"
           options:
             - { v: "250k", l: "250 kbps (long range)" }
             - { v: "500k", l: "500 kbps (long range)" }
-      - dropdown:
+      - when_key: "s.espnow.enable"
+        dropdown:
           label: "On channel conflict"
           key: "s.espnow.conflict_policy"
           default: "disable"
@@ -74,14 +82,19 @@ settings:
             - { v: "disable", l: "Disable until WiFi disconnects" }
             - { v: "stay",    l: "Stay on the ESPnow channel" }
       - caption: "Stay keeps this channel and refuses to join WiFi networks on another one, leaving if they change."
+        when_key: "s.espnow.enable"
       # How often this node says who it is is a property of the MEDIUM, so it
       # lives on each interface and not on any application: lxmf, rnsh and rlpg
       # keep their announce current with rnsd and never schedule anything.
-      - section: "Announces"
+      - { section: "Announces", when_key: "s.espnow.enable" }
       - integer: { label: "Announce interval", unit: "min", key: "s.espnow.announce_interval", min: 0, max: 1440, default: 30 }
+        when_key: "s.espnow.enable"
       - caption: "How often this node tells the air who it is. 0 = only when something changes or you press the button."
+        when_key: "s.espnow.enable"
       - button: { label: "Announce now", do: { set: { key: "espnow.announce_now", value: 1, edge: true } } }
-      - advanced:
+        when_key: "s.espnow.enable"
+      - when_key: "s.espnow.enable"
+        advanced:
           rows:
             - dropdown:
                 label: "Interface mode"
@@ -99,8 +112,9 @@ settings:
             - caption: "A network name + passphrase every peer on this interface must match, or traffic is dropped. Leave both blank for an open interface."
             - text: { label: "IFAC network", key: "s.espnow.ifac_netname" }
             - text: { label: "IFAC passphrase", key: "s.espnow.ifac_netkey", secret: true }
-      - section: "Status"
-      - info:
+      - { section: "Status", when_key: "s.espnow.enable" }
+      - when_key: "s.espnow.enable"
+        info:
           rows:
             - value: { label: "State", key: "espnow.state_text" }
             - value: { label: "Channel", key: "espnow.channel_eff" }
