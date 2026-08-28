@@ -127,8 +127,16 @@ static const char* stateWords(const char* state) {
  * pure broadcast medium and keeps no peer table of its own, so the count comes
  * from rnsd's shared neighbourhood — the same list `espnow n` prints. Published
  * while the switch is on, at 0 as readily as at 3. */
+/* The colour and the placement belong to the MEDIUM, so they are stated from
+ * boot: the network graph draws ESP-NOW links between other nodes on a device
+ * whose own is off, and those lines are still ESP-NOW. The pill itself still
+ * comes and goes with the switch. */
+#define ESPNOW_PILL_COLOR "9be89b"
+#define ESPNOW_PILL_ORDER 5
+#define ESPNOW_PILL_TITLE "ESP-NOW"
+
 static void publishPill(void) {
-    if (s_enabled) rnsdPillSet("espnow", 'E', rnsdPeersCount("espnow"), "9be89b", 5);
+    if (s_enabled) rnsdPillSet("espnow", 'E', rnsdPeersCount("espnow"), ESPNOW_PILL_COLOR, ESPNOW_PILL_ORDER);
     else           rnsdPillClear("espnow");
 }
 
@@ -681,6 +689,8 @@ static void espnowStop(void) {
 }
 
 void EspnowService::onInit() {
+
+    rnsdPillColor("espnow", ESPNOW_PILL_COLOR, ESPNOW_PILL_ORDER, ESPNOW_PILL_TITLE);
 
     cliRegisterCmd("espnow", cliEspnow);
 
