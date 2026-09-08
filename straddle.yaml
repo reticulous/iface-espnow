@@ -84,7 +84,7 @@ settings:
       - caption: "Stay keeps this channel and refuses to join WiFi networks on another one, leaving if they change."
         when_key: "s.espnow.enable"
       # How often this node says who it is is a property of the MEDIUM, so it
-      # lives on each interface and not on any application: lxmf, rnsh and rlpg
+      # lives on each interface and not on any application: lxmf, rnsh and lxmproxy
       # keep their announce current with rnsd and never schedule anything.
       - { section: "Announces", when_key: "s.espnow.enable" }
       - integer: { label: "Announce interval", unit: "min", key: "s.espnow.announce_interval", min: 0, max: 1440, default: 30 }
