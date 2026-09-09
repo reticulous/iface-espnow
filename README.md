@@ -84,7 +84,7 @@ The live Wi-Fi channel is re-checked on net upstream up/down and on a throttled
 | `s.espnow.conflict_policy` | `"disable"` | Behaviour on a Wi-Fi channel conflict: `"disable"` or `"stay"` (above). |
 | `s.espnow.ifac_netname` | `""` | IFAC network name. Empty = open (non-IFAC) interface. |
 | `s.espnow.ifac_size` | `0` | IFAC access-code length in bytes (0 = rnsd default). |
-| `s.espnow.announce_interval` | `30` | How often this node says who it is: rnsd replays every hosted destination's announce onto `espnow` on this beat, jittered ±10 %. Minutes. `0` = never on this interface's own account — the node then says who it is only when an application changes what it advertises, when a peer arrives, or on the pane's **Announce now**. Live. See [rns/README.md](../rns/README.md), "The announce beat". |
+| `s.espnow.announce_interval` | `30` | How often this node says who it is: rnsd replays every hosted destination's announce onto `espnow` on this beat, jittered ±10 %. Minutes. `0` = never on this interface's own account — the node then says who it is only when an application changes what it advertises, when a peer arrives, or on the pane's **Announce now**. Live. See [rns/README.md](../rns/README.md), "The announce tick". |
 | `s.espnow.mode` | `"access_point"` | interface mode: `full`, `gateway`, `access_point`, `roaming`, `boundary` |
 | `s.espnow.community_radius` | `3` | Community Radius: nodes within this many hops on this radio are served — their announces kept and answered for, searches run on their behalf, and only their announces are re-broadcast onto the air. `0` = endpoint: on-demand only. Default 3: this is an edge whose neighbours nobody else can answer for. See `rns/README.md`. |
 
@@ -114,7 +114,7 @@ and enforces it.
 | `espnow.rate_eff` | Effective rate in bits/s (250000 or 500000). |
 | `espnow.conflict_ch` | The conflicting Wi-Fi channel during a conflict; `0` when there is none. |
 | `espnow.stats.{tx_bytes,rx_bytes,tx_frames,rx_frames,tx_fail,rx_drop}` | Traffic counters. |
-| `espnow.announce_now` | Command sentinel, self-clearing: ask rnsd to replay every hosted destination's announce onto `espnow` now — the pane's **Announce now** button. |
+| `espnow.announce_now` | Command key, self-clearing: ask rnsd to replay every hosted destination's announce onto `espnow` now — the pane's **Announce now** button. |
 | `rns.pill.espnow.*` | The top status line's ESPnow pill (light green `9be89b`, order 5), written through rnsd: `E` and how many nodes are on the channel. This medium is pure broadcast and keeps no peer table of its own, so the count comes from rnsd's shared neighbourhood — the same list `espnow n` prints. Shown while the switch is on, at 0 as readily as at 3. See [rns/README](../rns/README.md#status-line-pills). |
 
 ## CLI
