@@ -432,6 +432,7 @@ static void applyConfig(void) {
     char ifn[sizeof(s_ifacNetname)] = ""; storageGetStr("s.espnow.ifac_netname", ifn, sizeof(ifn), "");
     char ifk[sizeof(s_ifacNetkey)]  = ""; storageGetStr("s.espnow.ifac_netkey", ifk, sizeof(ifk), "");
     uint8_t ifs = (uint8_t)storageGetInt("s.espnow.ifac_size", 0);
+    if (!ifs) ifs = RNS_IFAC_SIZE_PACKET;   /* a packet medium, like UDPInterface; no upstream counterpart */
     uint8_t acap = (uint8_t)storageGetInt("s.espnow.announce_cap", RNS_IFACE_ANNOUNCE_CAP_DEFAULT);
     /* Default 3: this is a radio edge whose neighbours nobody else can
      * answer for, and re-acquiring one costs airtime on the expensive side. */

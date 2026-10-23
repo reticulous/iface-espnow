@@ -83,7 +83,7 @@ The live Wi-Fi channel is re-checked on net upstream up/down and on a throttled
 | `s.espnow.rate` | `"250k"` | Long-range PHY rate: `"250k"` or `"500k"`. |
 | `s.espnow.conflict_policy` | `"disable"` | Behaviour on a Wi-Fi channel conflict: `"disable"` or `"stay"` (above). |
 | `s.espnow.ifac_netname` | `""` | IFAC network name. Empty = open (non-IFAC) interface. |
-| `s.espnow.ifac_size` | `0` | IFAC access-code length in bytes (0 = rnsd default). |
+| `s.espnow.ifac_size` | `0` | IFAC access-code length in bytes (`0` = 16, the packet-media default upstream UDPInterface uses). |
 | `s.espnow.announce_interval` | `30` | How often this node says who it is: rnsd replays every hosted destination's announce onto `espnow` on this beat, jittered ±10 %. Minutes. `0` = never on this interface's own account — the node then says who it is only when an application changes what it advertises, when a peer arrives, or on the pane's **Announce now**. Live. See [rns/README.md](../rns/README.md), "The announce tick". |
 | `s.espnow.mode` | `"access_point"` | interface mode: `full`, `gateway`, `access_point`, `roaming`, `boundary` |
 | `s.espnow.community_radius` | `3` | Community Radius: nodes within this many hops on this radio are served — their announces kept and answered for, searches run on their behalf, and only their announces are re-broadcast onto the air. `0` = endpoint: on-demand only. Default 3: this is an edge whose neighbours nobody else can answer for. See `rns/README.md`. |
@@ -100,9 +100,9 @@ The live Wi-Fi channel is re-checked on net upstream up/down and on a throttled
 
 IFAC (Interface Access Codes) is RNS access control: a network name + passphrase
 that must match on every peer of the interface, or traffic is dropped. All three
-IFAC fields (`ifac_netname`, `ifac_netkey`, `ifac_size`) are passed straight
-through to `rnsd` in the registration payload; `rnsd` derives the IFAC identity
-and enforces it.
+IFAC fields (`ifac_netname`, `ifac_netkey`, `ifac_size`) are passed through to
+`rnsd` in the registration payload, an unset `ifac_size` as 16; `rnsd` derives
+the IFAC identity and enforces it.
 
 ### Runtime state & telemetry (written)
 
